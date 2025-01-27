@@ -31,7 +31,7 @@ export default {
                     telefono: this.telefono
                 };
 
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/register', {
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

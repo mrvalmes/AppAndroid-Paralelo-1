@@ -25,7 +25,7 @@ export default {
         ...mapActions([]), // Más adelante podemos mapear la acción de login si la definimos en store
         async onLogin() {
             try {
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/login', {
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

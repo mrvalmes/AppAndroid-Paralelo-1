@@ -37,13 +37,7 @@
 
         <Label class="icon-label" text="💲 Precio total:" />
         <Label :text="'$' + selectedFactura.monto_total" class="detail-text mb-5" />
-
-        <Label class="icon-label" text="Equipo:" />
-        <Image
-        v-if="selectedSmartphone.Img"
-        :src="selectedSmartphone.Img"
-        class="phone-img"
-        />
+        
         </StackLayout>
 
         <!-- Botón Regresar -->
@@ -94,7 +88,7 @@ export default {
     methods: {
         async cargarFacturas() {
             try {
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/facturas');
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/facturas');
                 const data = await response.json();
                 // Actualiza la lista de facturas con los datos del servidor
                 this.facturas = data;
@@ -105,7 +99,7 @@ export default {
         },
         async cargarSmartphones() {
             try {
-                const response = await fetch('https://push-excellence-ko- land.trycloudflare.com/api/smartphones');
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/smartphones');
                 const data = await response.json();
                 this.smartphones = data; // Almacena los smartphones en el estado
             } catch (err) {

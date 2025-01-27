@@ -2,7 +2,6 @@
     <Page>
         <ActionBar title="Facturacion" />
         <ScrollView>
-
             <!-- Stack principal o varios stacks, pero sin etiqueta huérfana -->
             <StackLayout class="p-20">
                 <!-- Título -->
@@ -42,7 +41,13 @@
 </template>
 
 <script>
-import { knownFolders, path } from '@nativescript/core'; // crear archivos localmente
+import * as fs from '@nativescript/core/file-system'; // crear archivos localmente
+import { PDFDocument, rgb } from 'pdf-lib';
+import { knownFolders, path as fsPath } from '@nativescript/core/file-system';
+import { isAndroid, Application } from '@nativescript/core';
+//import { Application } from '@nativescript/core';
+import { File } from '@nativescript/core/file-system';
+//import { isAndroid } from '@nativescript/core/platform';
 
 export default {
     data() {
@@ -58,11 +63,7 @@ export default {
         
         smartphonesNames() {
             return this.smartphones.map(s => s.Model);
-        },
-        // Obtener el smartphone seleccionado según selectedIndex
-        //selectedSmartphone() {
-        //  return this.smartphones[this.selectedIndex] || null;
-        //}
+        },        
     },
     methods: {
         // Llamar a este método cuando inicies la pantalla o con un botón "Cargar"
@@ -71,7 +72,7 @@ export default {
         },
         async cargarSmartphones() {
             try {
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/smartphones');
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/smartphones');
                 const data = await response.json();
                 this.smartphones = data;
                 this.selectedIndex = 0; // Reinicias al primero
@@ -89,44 +90,117 @@ export default {
             // Actualiza selectedSmartphone
             this.selectedSmartphone = this.smartphones[this.selectedIndex] || null;
         },
-        guardarLocal() {
+        async guardarLocal() {
             try {
                 if (!this.selectedSmartphone) {
-                    alert('No hay smartphone seleccionado');
+                    alert('No hay telefono seleccionado');
                     return;
                 }
                 if (!this.cliente) {
-                    alert('Ingresa el nombre del cliente ');
+                    alert('Ingresa el nombre del cliente');
                     return;
                 }
 
-                // Crear un texto con los datos de la factura
-                const invoiceContent = `
-        FACTURA
-        Cliente: ${this.cliente}
-        Teléfono: ${this.selectedSmartphone.Model}
-        Precio: ${this.selectedSmartphone.Price}
-        Fecha: ${new Date().toLocaleString()}
-        `;
+                // 1. Crear el contenido (uso de varias líneas).
+                const invoiceContent = [          
+                    
+                    "-------------------------VamSmartphones-----------------------",                    
+                    "Av. Hispanoamericana, Plaza Fernandez Modulo 209",
+                    "Telefono: 829 712 4505 / 809 865 6009",                    
+                    `Fecha: ${new Date().toDateString()}`,
+                    "------------------------------------------------------------------",  
+                    "Factura a:",                   
+                    `Cliente: ${this.cliente}`,                    
+                    "-------------------------------------------------------------------",  
+                    `Teléfono: ${this.selectedSmartphone.Model}`,
+                    `Cantidad: ${this.cantidad}`,
+                    `Precio Unitario: $${this.selectedSmartphone.Price}.00`,
+                    "-------------------------------------------------------------------",
+                    `Total Facura: $${this.selectedSmartphone.Price*this.cantidad}.00`
+                    
+                ];
 
-                // Guardar en un archivo local (por ejemplo, en Documents/)
-                const documents = knownFolders.documents();
-                const fileName = `Factura_${Date.now()}.txt`; // o .pdf si deseas
-                const filePath = path.join(documents.path, fileName);
-                const file = documents.getFile(fileName);
+                // 2. Crear un documento PDF con pdf-lib
+                const pdfDoc = await PDFDocument.create();
+                const page = pdfDoc.addPage([320, 600]);  // 320 px de ancho, 600 px de alto    
+                const { width, height } = page.getSize();            
+                const font = await pdfDoc.embedStandardFont('Helvetica');
 
-                file.writeText(invoiceContent)
-                    .then(() => {
-                        alert(`Factura guardada localmente en ${filePath}`);
-                    })
-                    .catch((err) => {
-                        console.error('Error escribiendo archivo:', err);
-                        alert('No se pudo guardar la factura local');
+                // 3. Dibujar el texto línea a línea, y color negro
+                // 4. Dibujar cada línea manualmente
+                let yPos = height - 40; // Empieza 40 px debajo del tope
+                for (const line of invoiceContent) {
+                    page.drawText(line, {
+                        x: 20,
+                        y: yPos,
+                        size: 12,
+                        font,
+                        color: rgb(0, 0, 0), //color negro
                     });
+                    yPos -= 30; // Mover hacia abajo para la próxima línea
+                }                
+                
+                // 4. Guardar PDF en memoria (binario)                
+                let pdfBytes = await pdfDoc.save();
+                if (!(pdfBytes instanceof Uint8Array)) {
+                    pdfBytes = new Uint8Array(pdfBytes);
+                }
+
+                // 5. Guardar en un archivo local usando modo binario
+                const documentsFolder = knownFolders.documents();
+                const fileName = `Factura_${Date.now()}.pdf`;
+                const filePath = fsPath.join(documentsFolder.path, fileName);                
+                const javaFile = new java.io.File(filePath);
+                const outputStream = new java.io.FileOutputStream(javaFile);
+
+                const byteArray = Array.create('byte', pdfBytes.length);
+                for (let i = 0; i < pdfBytes.length; i++) {
+                    byteArray[i] = pdfBytes[i];
+                }
+
+                // Escribir y cerrar
+                outputStream.write(byteArray);
+                outputStream.flush();
+                outputStream.close();                
+
+                alert(`Factura guardada en: ${filePath}`);
+
+                // 6. Abrir el PDF con un Intent y FileProvider (Android 7+)
+                if (isAndroid) {
+                    try {
+                        const context = Application.android.context;
+                        const currentActivity = Application.android.foregroundActivity || Application.android.startActivity;
+
+                        let intent;
+                        if (android.os.Build.VERSION.SDK_INT >= 24) {
+                            // FileProvider
+                            const apkURI = androidx.core.content.FileProvider.getUriForFile(
+                                context,
+                                context.getPackageName() + ".provider",
+                                javaFile
+                            );
+                            intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                            intent.setDataAndType(apkURI, "application/pdf");
+                            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NO_HISTORY);
+                        } else {                            
+                            intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                            intent.setDataAndType(
+                                android.net.Uri.parse("file://" + filePath),
+                                "application/pdf"
+                            );
+                        }
+
+                        currentActivity.startActivity(android.content.Intent.createChooser(intent, "Abrir PDF"));
+                    } catch (e) {
+                        console.log("Error abriendo PDF:", e);
+                    }
+                }
+
             } catch (err) {
-                console.log(err);
-                alert('Error al guardar localmente');
-            }
+                console.log("Error guardando PDF:", err);
+                alert("No se pudo guardar la factura");
+            }     
         },
         async guardarBD() {
             try {
@@ -150,7 +224,7 @@ export default {
                     cantidad: this.cantidad, // Podrías pedirlo en el form
                 };
 
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/facturas', {
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/facturas', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -165,7 +239,8 @@ export default {
                 }
             } catch (error) {
                 console.log('Error guardando factura en BD:', error);
-                alert('No se pudo guardar la factura en la BD');
+                alert('No se pudo guardar la factura en la BD, se guardada en local');
+                guardarLocal();
             }
         }
     },

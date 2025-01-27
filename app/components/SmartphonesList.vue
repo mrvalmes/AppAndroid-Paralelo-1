@@ -76,7 +76,7 @@ export default {
     methods: {
         async cargarSmartphones() {
             try {
-                const response = await fetch('https://push-excellence-ko-land.trycloudflare.com/api/smartphones');
+                const response = await fetch('https://cove-str-nissan-moore.trycloudflare.com/api/smartphones');
                 const data = await response.json();
                 this.smartphones = data;
             } catch (err) {
@@ -97,7 +97,7 @@ export default {
 
                 if (selectedSmartphoneId) {
                     const response = await fetch(
-                        `https://push-excellence-ko-land.trycloudflare.com/api/smartphones/${selectedSmartphoneId}`
+                        `https://cove-str-nissan-moore.trycloudflare.com/api/smartphones/${selectedSmartphoneId}`
                     );
                     const data = await response.json();
                     this.selectedSmartphone = data; // Actualiza el smartphone seleccionado

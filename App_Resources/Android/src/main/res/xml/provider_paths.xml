@@ -1,0 +1,6 @@
+<paths>
+    <!-- Para leer/escribir en Documents folder -->
+    <files-path name="files" path="." />
+    <!-- Si quieres acceso a la carpeta de cache -->
+    <cache-path name="cache" path="." />
+</paths>
